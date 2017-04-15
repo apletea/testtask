@@ -102,11 +102,35 @@ def update_data_center(data_center_id):
 @requires_auth
 def create_date_center():
     db.session.add(request.get_json())
+    db.session.commit()
+    return jsonify({}),200
 
+@app.route('/api/servers', methods=['GET'])
+@requires_auth
+def get_servers_list():
+    servers = Server.query.all()
+    return jsonify({ModelSchema().dump(servers).data}),200
 
+@app.route('/api/server/search/<maker>/<name>', methods=['GET'])
+@requires_auth
+def serach_servers(maker,name):
+    servers = Server.query.filter(Server.name == name and Server.maker == maker)
+    return jsonify({ModelSchema().dump(servers).data}),200
 
+@app.route('/api/server/update/<int:id>', methods=['POST'])
+@requires_auth
+def update_server(id):
+    db.session.query(Server).filter(Server.id == id).update(request.get_json())
+    db.session.commit()
+    updated_server = Server.query.filter(Server.id == id)
+    return jsonify({ModelSchema().dump(updated_server).data}),200
 
-
+@app.route('/api/server/create', methods=['POST'])
+@requires_auth
+def create_server():
+    db.session.add(request.get_json())
+    db.session.commit()
+    return jsonify({}),200
 
 
 @app.route('/api/server/delete/<int:sever_id>', methods=['DELETE'])
@@ -117,134 +141,3 @@ def delete_server(server_id):
   db.session.commit()
   return  jsonify({}), 204
 
-@app.route('/api/models/<int:model_id>', methods=['PUT'])
-@requires_auth
-def update_model(model_id):
-  user = get_user(request)
-  try:
-    model = user.models.filter(Model.id == model_id).first()
-
-    if 'name' in request.get_json():
-      setattr(model, 'name', request.get_json()['name'])
-
-    for field in model.fields:
-      update_field = next((f for f in request.get_json()['fields'] if field.id == f['id']), None)
-
-      if update_field:
-        setattr(field, 'name', update_field['name']) if 'name' in update_field else None
-        setattr(field, 'data_type', update_field['data_type']) if 'data_type' in update_field else None
-        setattr(field, 'parent_node', update_field['parent_node']) if 'parent_node' in update_field else None
-      else:
-        db.session.delete(field)
-
-    for field in request.get_json()['fields']:
-      new_field = next((None for f in model.fields if f.id == field['id']), field)
-
-      if new_field:
-        new_field = Field(name=field['name'], model=model, data_type=field['data_type'])
-        new_field.parent_node = field['parent_node'] if 'parent_node' in field else None
-        model.fields.append(new_field)
-
-    db.session.add(model)
-    db.session.commit()
-    return jsonify(ModelSchema().dump(model).data), 200
-  except sqlalchemy.exc.SQLAlchemyError as e:
-    db.session.rollback()
-    return jsonify({"error": str(e)}), 401
-
-@app.route('/api/models/<int:model_id>', methods=['DELETE'])
-@requires_auth
-def delete_model(model_id):
-  user = get_user(request)
-  try:
-    model = user.models.filter(Model.id == model_id).first()
-    fields = model.fields.all()
-    db.session.delete(model)
-    [db.session.delete(field) for field in fields]
-    db.session.commit()
-    return jsonify({}), 204
-  except sqlalchemy.exc.SQLAlchemyError as e:
-    db.session.rollback()
-    return jsonify({"error": str(e)}), 401
-
-# GENERATOR =================================================================
-
-@app.route('/api/generator/string', methods=['GET'])
-@requires_auth
-def get_random_string():
-  return jsonify({ "string": get_random_string() }), 200
-
-@app.route('/api/generator/integer', methods=['GET'])
-@requires_auth
-def get_random_integer():
-  """To do: Allow url parameters to determine high/low for random integer. """
-  return jsonify({ "integer": get_random_integer() }), 200
-
-@app.route('/api/generator/float', methods=['GET'])
-@requires_auth
-def get_random_float():
-  """To do: Allow url parameters to determine high/low for random float. """
-  return jsonify({ "float": get_random_float() }), 200
-
-@app.route('/api/generator/boolean', methods=['GET'])
-@requires_auth
-def get_random_boolean():
-  return jsonify({ "boolean": get_random_boolean() }), 200
-
-# CUSTOM DATA TYPES [NOT IMPLEMENTED] =======================================
-
-@app.route('/api/custom-data-types', methods=['GET'])
-@requires_auth
-def get_custom_data_types():
-  user = get_user(request)
-  cdts = CustomDataType.query.filter_by(user = user).all()
-  return jsonify(CustomDataTypeSchema().dump(cdts, many=True).data), 200
-
-@app.route('/api/custom-data-types/<int:custom_data_type_id>', methods=['GET'])
-@requires_auth
-def get_custom_data_type(custom_data_type_id):
-  user = get_user(request)
-  cdt = user.custom_data_types.filter(CustomDataType.id == custom_data_type_id)
-  return jsonify(CustomDataTypeSchema().dump(cdt).data), 200
-
-@app.route('/api/custom-data-types', methods=['POST'])
-@requires_auth
-def create_custom_data_type():
-  user = get_user(request)
-  try:
-    cdt = CustomDataType(name=request.get_json()['name'], user=user)
-    db.session.add(cdt)
-    db.session.commit()
-    query = CustomDataType.query.get(cdt.id)
-    return jsonify(CustomDataTypeSchema().dump(query).data), 201
-  except sqlalchemy.exc.SQLAlchemyError as e:
-    db.session.rollback()
-    return jsonify({"error": str(e)}), 401
-
-@app.route('/api/custom-data-types/<int:custom_data_type_id>', methods=['PUT'])
-@requires_auth
-def update_custom_data_type(custom_data_type_id):
-  user = get_user(request)
-  try:
-    cdt = user.custom_data_types.filter(CustomDataType.id == custom_data_type_id).first()
-    for key, value in request.get_json().items():
-      setattr(cdt, key, value)
-    db.session.add(cdt)
-    db.session.commit()
-    return jsonify(CustomDataTypeSchema().dump(cdt).data, 200)
-  except sqlalchemy.exc.SQLAlchemyError as e:
-    db.session.rollback()
-    return jsonify({"error": str(e)}), 401
-
-@app.route('/api/custom-data-types/<int:custom_data_type_id>', methods=['DELETE'])
-@requires_auth
-def delete_custom_data_type(custom_data_type_id):
-  user = get_user(request)
-  try:
-    cdt = user.custom_data_types.filter(CustomDataType.id == custom_data_type_id).first()
-    db.session.delete(cdt)
-    db.session.commit()
-    return jsonify({}), 204
-  except sqlalchemy.exc.SQLAlchemyError as e:
-    db.session.rollback()
-return jsonify({"error": str(e)}), 401
