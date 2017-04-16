@@ -6,7 +6,7 @@ from passlib.apps import custom_app_context as pwd_context
 
 
 class User(db.Model):
-  __tablename__    = 'user'
+  __tablename__    = 'users'
   id               = db.Column(db.Integer, primary_key=True)
   email            = db.Column(db.String(120), unique=True, index=True)
   password_hash    = db.Column(db.String(128))
@@ -81,8 +81,8 @@ class DataCenter(db.Model):
 class DataCenterServer(db.Model):
     __tablename__ = 'data_center_server'
     id = db.Column(db.Integer, primary_key=True)
-    server_id = db.Column(db.Integer, references = Server.id)
-    data_center_id = db.Column(db.Integer, references = DataCenter.id )
+    server_id = db.Column(db.Integer )
+    data_center_id = db.Column(db.Integer )
 
     def __init__(self,server_id, data_center_id):
         self.data_center_id = data_center_id
@@ -94,7 +94,7 @@ class DataCenterServer(db.Model):
     def get_id(self):
         return self.id
 
-class UserSchema(ma.ModeelSchema):
+class UserSchema(ma.ModelSchema):
   class Meta:
     model = User
 

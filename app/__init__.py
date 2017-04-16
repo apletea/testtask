@@ -12,7 +12,8 @@ CsrfProtect(app)
 
 app.config.from_object(os.environ['SEEDBASE_CONFIG'])
 
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-from app import models
+from app import models,api,views
