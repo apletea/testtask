@@ -10,7 +10,7 @@ db = SQLAlchemy(app)
 ma = Marshmallow(app)
 CsrfProtect(app)
 
-app.config.from_object(os.environ['SEEDBASE_CONFIG'])
+app.config.from_object(os.environ['TEST_CONFIG'])
 
 
 login_manager = LoginManager()
